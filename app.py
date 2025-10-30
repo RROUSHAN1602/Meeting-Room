@@ -180,7 +180,6 @@ def inject_css():
 def room_card(df: pd.DataFrame, room: dict, today: date):
     state, label, now_row, next_row = room_status_for_today(df, room["id"], today)
 
-    # starting soon?
     starting_soon = False
     if state == "available" and next_row is not None:
         ns = parse_time_str(next_row["start_time"])
@@ -188,37 +187,39 @@ def room_card(df: pd.DataFrame, room: dict, today: date):
         diff = soon_dt - now_ist()
         starting_soon = diff <= timedelta(minutes=STARTING_SOON_MIN) and diff.total_seconds() > 0
 
+    # Room card container
     st.markdown('<div class="card">', unsafe_allow_html=True)
-    left, right = st.columns([0.6, 0.4])
+    st.subheader(room["name"])
+    st.markdown(status_pill(state, starting_soon), unsafe_allow_html=True)
+    st.markdown(f"<div class='muted' style='margin-top:6px;'>{label}</div>", unsafe_allow_html=True)
 
-    with left:
-        st.subheader(room["name"])
-        st.markdown(status_pill(state, starting_soon), unsafe_allow_html=True)
-        st.markdown(f"<div class='muted' style='margin-top:6px;'>{label}</div>", unsafe_allow_html=True)
+    # Split into two main columns: Left (status) | Right (quick book)
+    col_left, col_right = st.columns([0.6, 0.4])
 
-        col1, col2 = st.columns(2)
-        with col1:
-            st.caption("Now")
-            if state == "occupied" and now_row is not None:
-                st.markdown(f"**{now_row['title']}**")
-                st.markdown(
-                    f"<span class='muted'>{now_row['start_time']}–{now_row['end_time']} · Host: {now_row['booked_by']}</span>",
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.markdown("<span class='muted'>Free</span>", unsafe_allow_html=True)
-        with col2:
-            st.caption("Next")
-            if next_row is not None:
-                st.markdown(f"**{next_row['title']}**")
-                st.markdown(
-                    f"<span class='muted'>{next_row['start_time']}–{next_row['end_time']} · Host: {next_row['booked_by']}</span>",
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.markdown("<span class='muted'>No upcoming meetings</span>", unsafe_allow_html=True)
+    # LEFT SECTION — Now / Next info
+    with col_left:
+        st.caption("Now")
+        if state == "occupied" and now_row is not None:
+            st.markdown(f"**{now_row['title']}**")
+            st.markdown(
+                f"<span class='muted'>{now_row['start_time']}–{now_row['end_time']} · Host: {now_row['booked_by']}</span>",
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown("<span class='muted'>Free</span>", unsafe_allow_html=True)
 
-    with right:
+        st.caption("Next")
+        if next_row is not None:
+            st.markdown(f"**{next_row['title']}**")
+            st.markdown(
+                f"<span class='muted'>{next_row['start_time']}–{next_row['end_time']} · Host: {next_row['booked_by']}</span>",
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown("<span class='muted'>No upcoming meetings</span>", unsafe_allow_html=True)
+
+    # RIGHT SECTION — Quick Booking form
+    with col_right:
         st.caption("Quick Book")
         with st.form(f"quick_book_{room['id']}", clear_on_submit=True):
             qb_title = st.text_input("Title / Purpose", placeholder="e.g., Marketing Sync")
